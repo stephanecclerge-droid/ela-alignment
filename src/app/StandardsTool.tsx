@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { STANDARDS, STRANDS, type Standard } from "@/lib/standards";
 import { createClient } from "@/lib/supabase/client";
@@ -13,11 +13,67 @@ type AnalysisResult = {
   studentPlainLanguageNote: string;
 };
 
+type HistoryRow = {
+  id: string;
+  standard_code: string;
+  lesson_text: string;
+  alignment_level: AnalysisResult["alignmentLevel"];
+  summary: string;
+  gaps: string[];
+  recommendations: string[];
+  student_plain_language_note: string;
+  created_at: string;
+};
+
 const ALIGNMENT_STYLES: Record<AnalysisResult["alignmentLevel"], string> = {
   strong: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
   partial: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
   weak: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
 };
+
+function ResultDetails({ result }: { result: AnalysisResult }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <span
+        className={`self-start rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${ALIGNMENT_STYLES[result.alignmentLevel]}`}
+      >
+        {result.alignmentLevel} alignment
+      </span>
+      <p className="text-zinc-800 dark:text-zinc-200">{result.summary}</p>
+
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          Gaps
+        </h3>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-zinc-800 dark:text-zinc-200">
+          {result.gaps.map((g) => (
+            <li key={g}>{g}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          Recommendations
+        </h3>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-zinc-800 dark:text-zinc-200">
+          {result.recommendations.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          For students, about this lesson
+        </h3>
+        <p className="mt-1 text-zinc-800 dark:text-zinc-200">
+          {result.studentPlainLanguageNote}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function StandardsTool({ userEmail }: { userEmail: string }) {
   const router = useRouter();
@@ -27,8 +83,26 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const standardsForStrand = STANDARDS.filter((s) => s.strand === strand);
+
+  async function loadHistory() {
+    setHistoryLoading(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("analyses")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setHistory((data as HistoryRow[]) ?? []);
+    setHistoryLoading(false);
+  }
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
   async function handleAnalyze() {
     if (!selected || !lessonText.trim()) return;
@@ -46,6 +120,7 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
         throw new Error(body.error || "Something went wrong.");
       }
       setResult(await res.json());
+      loadHistory();
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -200,48 +275,68 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
             )}
 
             {result && (
-              <div className="mt-2 flex flex-col gap-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-                <span
-                  className={`self-start rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${ALIGNMENT_STYLES[result.alignmentLevel]}`}
-                >
-                  {result.alignmentLevel} alignment
-                </span>
-                <p className="text-zinc-800 dark:text-zinc-200">{result.summary}</p>
-
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Gaps
-                  </h3>
-                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-zinc-800 dark:text-zinc-200">
-                    {result.gaps.map((g) => (
-                      <li key={g}>{g}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Recommendations
-                  </h3>
-                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-zinc-800 dark:text-zinc-200">
-                    {result.recommendations.map((r) => (
-                      <li key={r}>{r}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    For students, about this lesson
-                  </h3>
-                  <p className="mt-1 text-zinc-800 dark:text-zinc-200">
-                    {result.studentPlainLanguageNote}
-                  </p>
-                </div>
+              <div className="mt-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                <ResultDetails result={result} />
               </div>
             )}
           </div>
         )}
+
+        <div className="mt-8">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Your saved checks
+          </h2>
+          {historyLoading && (
+            <p className="mt-2 text-sm text-zinc-500">Loading...</p>
+          )}
+          {!historyLoading && history.length === 0 && (
+            <p className="mt-2 text-sm text-zinc-500">
+              Nothing saved yet — run a check above and it'll show up here.
+            </p>
+          )}
+          <div className="mt-3 flex flex-col gap-2">
+            {history.map((row) => (
+              <div
+                key={row.id}
+                className="rounded-lg bg-white ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
+              >
+                <button
+                  onClick={() =>
+                    setExpandedId(expandedId === row.id ? null : row.id)
+                  }
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                >
+                  <span className="flex items-center gap-2 text-sm">
+                    <span className="font-mono font-semibold text-zinc-800 dark:text-zinc-200">
+                      {row.standard_code}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${ALIGNMENT_STYLES[row.alignment_level]}`}
+                    >
+                      {row.alignment_level}
+                    </span>
+                  </span>
+                  <span className="text-xs text-zinc-500">
+                    {new Date(row.created_at).toLocaleString()}
+                  </span>
+                </button>
+                {expandedId === row.id && (
+                  <div className="border-t border-zinc-200 px-4 py-4 dark:border-zinc-800">
+                    <ResultDetails
+                      result={{
+                        alignmentLevel: row.alignment_level,
+                        summary: row.summary,
+                        gaps: row.gaps,
+                        recommendations: row.recommendations,
+                        studentPlainLanguageNote: row.student_plain_language_note,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </main>
     </div>
   );
