@@ -59,12 +59,24 @@ export default function Home() {
               }`}
             >
               <span className="font-mono font-semibold">{s.code}</span>
+              {!s.verified && (
+                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                  needs review
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         {selected && (
           <div className="mt-8 flex flex-col gap-6 rounded-xl bg-white p-6 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
+            {!selected.verified && (
+              <p className="rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                This wording was only cross-checked via search, not confirmed
+                on the official page directly — worth a teacher gut-check
+                before relying on it.
+              </p>
+            )}
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Official standard text
