@@ -6,4 +6,12 @@ Starting scope: 10th grade, all ELA strands (Reading, Writing, Language, Speakin
 
 Stack: Next.js, Supabase, Claude (Anthropic API), Vercel.
 
-Status: Phase 1 (product plan) — no application code yet.
+Status: Phase 2 (toolbox set up) — blank app scaffold only, no real features yet.
+
+## Local development
+
+```bash
+npm run dev
+```
+
+Then open http://localhost:3000
