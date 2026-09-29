@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { STANDARDS } from "@/lib/standards";
+import { createClient } from "@/lib/supabase/server";
 
 // This file runs only on the server, never in the browser — the API key
 // is only ever read here via process.env, never sent to the client.
@@ -38,6 +39,15 @@ const RESULT_SCHEMA = {
 };
 
 export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Not logged in." }, { status: 401 });
+  }
+
   const { standardCode, lessonText } = await req.json();
 
   if (typeof standardCode !== "string" || typeof lessonText !== "string" || !lessonText.trim()) {
@@ -79,5 +89,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No analysis returned." }, { status: 502 });
   }
 
-  return NextResponse.json(JSON.parse(textBlock.text));
+  const result = JSON.parse(textBlock.text);
+
+  const { error: saveError } = await supabase.from("analyses").insert({
+    user_id: user.id,
+    standard_code: standardCode,
+    lesson_text: lessonText,
+    alignment_level: result.alignmentLevel,
+    summary: result.summary,
+    gaps: result.gaps,
+    recommendations: result.recommendations,
+    student_plain_language_note: result.studentPlainLanguageNote,
+  });
+
+  if (saveError) {
+    // The analysis itself succeeded — surface it to the teacher even if
+    // saving failed, but flag that it won't show up in history later.
+    console.error("Failed to save analysis:", saveError.message);
+    return NextResponse.json({ ...result, saved: false });
+  }
+
+  return NextResponse.json({ ...result, saved: true });
 }
