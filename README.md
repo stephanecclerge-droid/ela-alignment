@@ -6,7 +6,7 @@ Starting scope: 10th grade, all ELA strands (Reading, Writing, Language, Speakin
 
 Stack: Next.js, Supabase, Claude (Anthropic API), Vercel.
 
-Status: Phase 2 (toolbox set up) — blank app scaffold only, no real features yet.
+Status: Phases 0–6 complete — real authentication, database with row-level security, live AI lesson analysis, and privacy/compliance pages all working end to end. Next: deployment verification and a pilot with real teachers.
 
 ## Local development
 
