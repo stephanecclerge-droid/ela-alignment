@@ -101,6 +101,16 @@ export default function LoginPage() {
         >
           {mode === "login" ? "Need an account? Sign up" : "Already have an account? Log in"}
         </button>
+
+        <p className="mt-6 text-center text-xs text-zinc-400 dark:text-zinc-600">
+          <a href="/privacy" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">
+            Privacy Policy
+          </a>{" "}
+          &middot;{" "}
+          <a href="/terms" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">
+            Terms of Service
+          </a>
+        </p>
       </div>
     </div>
   );

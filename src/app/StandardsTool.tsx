@@ -252,6 +252,10 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 Paste the lesson or curriculum text below.
               </p>
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
+                Please don&apos;t include real student names or identifying
+                student information — lesson and curriculum text only.
+              </p>
             </div>
             <textarea
               value={lessonText}
