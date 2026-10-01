@@ -29,6 +29,10 @@ export async function POST(req: NextRequest) {
       // Lazy-imported so this heavy PDF.js-based parser only loads when a
       // PDF actually comes in.
       const { PDFParse } = await import("pdf-parse");
+      // Some PDFs exercise image/color-space code in pdfjs-dist that expects
+      // a browser canvas (DOMMatrix etc.) even when only extracting text —
+      // this is pdf-parse's own documented Node.js fix for that.
+      const { CanvasFactory } = await import("pdf-parse/worker");
       // pdfjs-dist defaults to a relative "./pdf.worker.mjs" specifier, which
       // breaks once Next.js bundles this route — point it at the real file
       // on disk instead.
@@ -37,7 +41,7 @@ export async function POST(req: NextRequest) {
         "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
       );
       PDFParse.setWorker(pathToFileURL(workerPath).href);
-      const parser = new PDFParse({ data: buffer });
+      const parser = new PDFParse({ data: buffer, CanvasFactory });
       const result = await parser.getText();
       await parser.destroy();
       return NextResponse.json({ text: result.text });
