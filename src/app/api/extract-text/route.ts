@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import mammoth from "mammoth";
+import path from "path";
+import { pathToFileURL } from "url";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
@@ -27,6 +29,14 @@ export async function POST(req: NextRequest) {
       // Lazy-imported so this heavy PDF.js-based parser only loads when a
       // PDF actually comes in.
       const { PDFParse } = await import("pdf-parse");
+      // pdfjs-dist defaults to a relative "./pdf.worker.mjs" specifier, which
+      // breaks once Next.js bundles this route — point it at the real file
+      // on disk instead.
+      const workerPath = path.join(
+        process.cwd(),
+        "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+      );
+      PDFParse.setWorker(pathToFileURL(workerPath).href);
       const parser = new PDFParse({ data: buffer });
       const result = await parser.getText();
       await parser.destroy();
@@ -46,7 +56,8 @@ export async function POST(req: NextRequest) {
       { error: "Unsupported file type. Please upload a PDF, .docx, or .txt file." },
       { status: 400 },
     );
-  } catch {
+  } catch (err) {
+    console.error("extract-text failed:", err);
     return NextResponse.json(
       { error: "Couldn't read that file. It may be corrupted or an unsupported format." },
       { status: 422 },
