@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { STANDARDS, STRANDS, type Standard } from "@/lib/standards";
 import { createClient } from "@/lib/supabase/client";
@@ -75,11 +75,32 @@ function ResultDetails({ result }: { result: AnalysisResult }) {
   );
 }
 
+const GOAL_OPTIONS = [
+  "Confirm I'm already aligned",
+  "Find specific gaps",
+  "Get ideas to strengthen it",
+  "Just exploring the tool",
+];
+
+const LESSON_SOURCE_OPTIONS = [
+  "I wrote it myself",
+  "Given to me by my school/curriculum",
+  "Found it online",
+];
+
+const CONFIDENCE_OPTIONS = ["Very confident", "Somewhat", "Not sure"];
+
 export default function StandardsTool({ userEmail }: { userEmail: string }) {
   const router = useRouter();
+  const [grade, setGrade] = useState("10");
   const [strand, setStrand] = useState<(typeof STRANDS)[number]>("Writing");
   const [selected, setSelected] = useState<Standard | null>(null);
   const [lessonText, setLessonText] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [goal, setGoal] = useState<string | null>(null);
+  const [lessonSource, setLessonSource] = useState<string | null>(null);
+  const [confidenceBefore, setConfidenceBefore] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
@@ -113,7 +134,13 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ standardCode: selected.code, lessonText }),
+        body: JSON.stringify({
+          standardCode: selected.code,
+          lessonText,
+          goal,
+          lessonSource,
+          confidenceBefore,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -125,6 +152,31 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
       setAnalyzeError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setAnalyzing(false);
+    }
+  }
+
+  async function handleFileUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/extract-text", {
+        method: "POST",
+        body: formData,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || "Couldn't read that file.");
+      }
+      setLessonText(body.text);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Couldn't read that file.");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -147,9 +199,31 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
             Sign out
           </button>
         </div>
-        <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-          Grade 10 &middot; NYS Next Generation ELA
-        </p>
+        <div className="flex items-center gap-2">
+          <label htmlFor="grade" className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+            Grade
+          </label>
+          <select
+            id="grade"
+            value={grade}
+            onChange={(e) => setGrade(e.target.value)}
+            className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm font-medium text-zinc-700 outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+          >
+            <option value="9" disabled>
+              9th grade (coming soon)
+            </option>
+            <option value="10">10th grade</option>
+            <option value="11" disabled>
+              11th grade (coming soon)
+            </option>
+            <option value="12" disabled>
+              12th grade (coming soon)
+            </option>
+          </select>
+          <span className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+            &middot; NYS Next Generation ELA
+          </span>
+        </div>
         <h1 className="mt-2 text-2xl font-semibold text-black dark:text-zinc-50">
           Standards Lookup
         </h1>
@@ -257,13 +331,103 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
                 student information — lesson and curriculum text only.
               </p>
             </div>
+
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer rounded-full bg-zinc-100 px-4 py-1.5 text-sm font-medium text-zinc-700 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700 dark:hover:bg-zinc-700">
+                {uploading ? "Reading file..." : "Upload a file instead"}
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+              <span className="text-xs text-zinc-500">PDF, Word (.docx), or .txt</span>
+            </div>
+            {uploadError && (
+              <p className="rounded-lg bg-rose-50 px-4 py-2 text-sm text-rose-800 dark:bg-rose-900/30 dark:text-rose-300">
+                {uploadError}
+              </p>
+            )}
+
             <textarea
               value={lessonText}
               onChange={(e) => setLessonText(e.target.value)}
               rows={8}
-              placeholder="Paste your lesson text here..."
+              placeholder="Paste your lesson text here, or upload a file above..."
               className="w-full rounded-lg border border-zinc-300 bg-white p-3 text-sm text-zinc-800 outline-none focus:border-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:focus:border-white"
             />
+
+            <div className="flex flex-col gap-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+              <div>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  What&apos;s your main goal in checking this lesson?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {GOAL_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setGoal(opt)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        goal === opt
+                          ? "bg-black text-white dark:bg-white dark:text-black"
+                          : "bg-white text-zinc-700 ring-1 ring-zinc-300 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-zinc-700"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Where did this lesson come from?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {LESSON_SOURCE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setLessonSource(opt)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        lessonSource === opt
+                          ? "bg-black text-white dark:bg-white dark:text-black"
+                          : "bg-white text-zinc-700 ring-1 ring-zinc-300 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-zinc-700"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  How confident were you that this lesson already aligned,
+                  before checking?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {CONFIDENCE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setConfidenceBefore(opt)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        confidenceBefore === opt
+                          ? "bg-black text-white dark:bg-white dark:text-black"
+                          : "bg-white text-zinc-700 ring-1 ring-zinc-300 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-zinc-700"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <button
               onClick={handleAnalyze}
               disabled={analyzing || !lessonText.trim()}

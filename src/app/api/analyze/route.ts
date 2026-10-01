@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not logged in." }, { status: 401 });
   }
 
-  const { standardCode, lessonText } = await req.json();
+  const { standardCode, lessonText, goal, lessonSource, confidenceBefore } = await req.json();
 
   if (typeof standardCode !== "string" || typeof lessonText !== "string" || !lessonText.trim()) {
     return NextResponse.json(
@@ -100,6 +100,9 @@ export async function POST(req: NextRequest) {
     gaps: result.gaps,
     recommendations: result.recommendations,
     student_plain_language_note: result.studentPlainLanguageNote,
+    goal: typeof goal === "string" ? goal : null,
+    lesson_source: typeof lessonSource === "string" ? lessonSource : null,
+    confidence_before: typeof confidenceBefore === "string" ? confidenceBefore : null,
   });
 
   if (saveError) {

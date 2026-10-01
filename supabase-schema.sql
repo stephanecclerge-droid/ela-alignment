@@ -36,3 +36,10 @@ create policy "Users can insert their own analyses"
 -- RLS policies above are correct, because access is blocked one level
 -- earlier, before RLS is ever checked.
 grant select, insert on analyses to authenticated;
+
+-- Added for the Phase 7 pilot: a few quick answers captured alongside each
+-- check, so real usage patterns can be seen across pilot teachers later.
+alter table analyses
+  add column goal text,
+  add column lesson_source text,
+  add column confidence_before text;
