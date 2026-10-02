@@ -43,3 +43,24 @@ alter table analyses
   add column goal text,
   add column lesson_source text,
   add column confidence_before text;
+
+-- General open-ended feedback from pilot teachers (separate from the
+-- per-check questions above) — submit-only from the app; read via the
+-- Supabase dashboard Table Editor, same pattern as everywhere else in this
+-- project that needed a direct look at the data.
+create table feedback (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  message text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table feedback enable row level security;
+
+create policy "Users can submit their own feedback"
+  on feedback for insert
+  with check (auth.uid() = user_id);
+
+-- Required because this project has "Automatically expose new tables"
+-- turned off — see the identical note above for the analyses table.
+grant insert on feedback to authenticated;

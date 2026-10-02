@@ -90,6 +90,98 @@ const LESSON_SOURCE_OPTIONS = [
 
 const CONFIDENCE_OPTIONS = ["Very confident", "Somewhat", "Not sure"];
 
+function FeedbackWidget() {
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    if (!message.trim()) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Something went wrong.");
+      }
+      setSubmitted(true);
+      setMessage("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="fixed bottom-6 right-6 rounded-full bg-black px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+      >
+        Feedback
+      </button>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 w-80 rounded-xl bg-white p-4 shadow-xl ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-black dark:text-zinc-50">
+          Got feedback?
+        </h3>
+        <button
+          onClick={() => {
+            setOpen(false);
+            setSubmitted(false);
+            setError(null);
+          }}
+          className="text-zinc-400 hover:text-black dark:hover:text-white"
+          aria-label="Close feedback form"
+        >
+          ✕
+        </button>
+      </div>
+
+      {submitted ? (
+        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+          Thanks — this really helps.
+        </p>
+      ) : (
+        <>
+          <p className="mt-1 text-xs text-zinc-500">
+            Anything confusing, broken, or missing? Tell me directly.
+          </p>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+            placeholder="What's on your mind..."
+            className="mt-3 w-full rounded-lg border border-zinc-300 bg-white p-2.5 text-sm text-zinc-800 outline-none focus:border-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:focus:border-white"
+          />
+          {error && (
+            <p className="mt-2 text-xs text-rose-700 dark:text-rose-400">{error}</p>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !message.trim()}
+            className="mt-2 w-full rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          >
+            {submitting ? "Sending..." : "Send"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function StandardsTool({ userEmail }: { userEmail: string }) {
   const router = useRouter();
   const [grade, setGrade] = useState("10");
@@ -506,6 +598,7 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
           </div>
         </div>
       </main>
+      <FeedbackWidget />
     </div>
   );
 }
