@@ -34,11 +34,16 @@ const ALIGNMENT_STYLES: Record<AnalysisResult["alignmentLevel"], string> = {
 function ResultDetails({ result }: { result: AnalysisResult }) {
   return (
     <div className="flex flex-col gap-4">
-      <span
-        className={`self-start rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${ALIGNMENT_STYLES[result.alignmentLevel]}`}
-      >
-        {result.alignmentLevel} alignment
-      </span>
+      <div className="flex items-center justify-between gap-3">
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${ALIGNMENT_STYLES[result.alignmentLevel]}`}
+        >
+          {result.alignmentLevel} alignment
+        </span>
+        <span className="text-xs text-zinc-500">
+          AI-generated — review before acting on it
+        </span>
+      </div>
       <p className="text-zinc-800 dark:text-zinc-200">{result.summary}</p>
 
       <div>
@@ -345,8 +350,8 @@ export default function StandardsTool({ userEmail }: { userEmail: string }) {
         <div className="mt-4 flex flex-col gap-2">
           {standardsForStrand.length === 0 && (
             <p className="rounded-lg bg-zinc-100 px-4 py-3 text-sm text-zinc-500 dark:bg-zinc-900">
-              No standards loaded for {strand} yet — Writing is the only strand
-              with real data so far.
+              No standards loaded for {strand} yet — try Writing or Reading,
+              which have real data so far.
             </p>
           )}
           {standardsForStrand.map((s) => (

@@ -4,6 +4,11 @@ import path from "path";
 import { pathToFileURL } from "url";
 import { createClient } from "@/lib/supabase/server";
 
+// PDF parsing can run long on a scanned/image-heavy file — give it more
+// room than Vercel's short default so it fails with a clean error instead
+// of an unlabeled timeout.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const {
