@@ -58,6 +58,23 @@ export default function LandingPage() {
           </p>
         </div>
 
+        <div className="mt-10">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            The bigger picture
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-black dark:text-zinc-50">
+            Starting narrow on purpose. Built to grow far beyond it.
+          </h2>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            This tool begins with 10th grade NYS Common Core ELA, proven
+            with real teachers before expanding further — more grades,
+            including elementary reading and writing, are next. The longer
+            goal: connect this same plain-language clarity to the full
+            instructional loop — standards, curriculum, lessons, student
+            work, and mastery — not just one lesson at a time.
+          </p>
+        </div>
+
         <div className="mt-10 flex items-center gap-4">
           <Link
             href="/login"
