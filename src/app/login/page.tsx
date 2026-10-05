@@ -6,19 +6,35 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signupMessage, setSignupMessage] = useState<string | null>(null);
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setSignupMessage(null);
+    setForgotMessage(null);
     const supabase = createClient();
+
+    if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+      setForgotMessage("If that email has an account, a reset link is on its way.");
+      setLoading(false);
+      return;
+    }
 
     if (mode === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -36,7 +52,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      setSignupMessage("Account created. Check your email to confirm, then log in.");
+      setSignupMessage("Account created — log in below with the password you just set.");
       setMode("login");
       setLoading(false);
     }
@@ -49,7 +65,7 @@ export default function LoginPage() {
           Grade 10 &middot; NYS Next Generation ELA
         </p>
         <h1 className="mt-2 text-xl font-semibold text-black dark:text-zinc-50">
-          {mode === "login" ? "Log in" : "Create an account"}
+          {mode === "login" ? "Log in" : mode === "signup" ? "Create an account" : "Reset your password"}
         </h1>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
@@ -61,15 +77,17 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             className="rounded-lg border border-zinc-300 bg-white p-2.5 text-sm text-zinc-800 outline-none focus:border-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:focus:border-white"
           />
-          <input
-            type="password"
-            required
-            minLength={6}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded-lg border border-zinc-300 bg-white p-2.5 text-sm text-zinc-800 outline-none focus:border-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:focus:border-white"
-          />
+          {mode !== "forgot" && (
+            <input
+              type="password"
+              required
+              minLength={6}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="rounded-lg border border-zinc-300 bg-white p-2.5 text-sm text-zinc-800 outline-none focus:border-black dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:focus:border-white"
+            />
+          )}
 
           {error && (
             <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:bg-rose-900/30 dark:text-rose-300">
@@ -81,25 +99,55 @@ export default function LoginPage() {
               {signupMessage}
             </p>
           )}
+          {forgotMessage && (
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+              {forgotMessage}
+            </p>
+          )}
 
           <button
             type="submit"
             disabled={loading}
             className="mt-1 rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-40 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
           >
-            {loading ? "Please wait..." : mode === "login" ? "Log in" : "Create account"}
+            {loading
+              ? "Please wait..."
+              : mode === "login"
+                ? "Log in"
+                : mode === "signup"
+                  ? "Create account"
+                  : "Send reset link"}
           </button>
         </form>
 
+        {mode === "login" && (
+          <button
+            onClick={() => {
+              setMode("forgot");
+              setError(null);
+              setSignupMessage(null);
+              setForgotMessage(null);
+            }}
+            className="mt-4 block text-sm text-zinc-600 underline hover:text-black dark:text-zinc-400 dark:hover:text-white"
+          >
+            Forgot password?
+          </button>
+        )}
+
         <button
           onClick={() => {
-            setMode(mode === "login" ? "signup" : "login");
+            setMode(mode === "signup" ? "login" : mode === "forgot" ? "login" : "signup");
             setError(null);
             setSignupMessage(null);
+            setForgotMessage(null);
           }}
-          className="mt-4 text-sm text-zinc-600 underline hover:text-black dark:text-zinc-400 dark:hover:text-white"
+          className="mt-2 block text-sm text-zinc-600 underline hover:text-black dark:text-zinc-400 dark:hover:text-white"
         >
-          {mode === "login" ? "Need an account? Sign up" : "Already have an account? Log in"}
+          {mode === "signup"
+            ? "Already have an account? Log in"
+            : mode === "forgot"
+              ? "Back to log in"
+              : "Need an account? Sign up"}
         </button>
 
         <p className="mt-6 text-center text-xs text-zinc-400 dark:text-zinc-600">
